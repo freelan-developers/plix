@@ -23,6 +23,8 @@ parallel, on different platforms.
         'tests',
     ]),
     install_requires=[
+        'chromalog',
+        'pyyaml',
     ],
     test_suite='tests',
     classifiers=[
