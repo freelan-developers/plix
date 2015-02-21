@@ -52,3 +52,8 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Virtualenvs
+.plix2.7/
+.plix3.3/
+.plix3.4/
