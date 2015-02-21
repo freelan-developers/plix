@@ -1,0 +1,19 @@
+language: python
+python:
+  - "2.7"
+  - "3.3"
+  - "3.4"
+install:
+  - pip install -r dev_requirements.txt
+  - pip install --editable .
+script:
+  - pep8 --count plix tests
+  - coverage run --source=plix setup.py nosetests --with-doctest --doctest-extension=rst --tests tests,plix,doc/source
+  - sphinx-build -b doctest -W doc/source doc/build/html
+  - sphinx-build -b html -W doc/source doc/build/html
+  - coverage report -m --fail-under=100
+after_success: coveralls
+notifications:
+    email:
+        on_success: change
+        on_failure: always
