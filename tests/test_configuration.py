@@ -4,6 +4,7 @@ Test the configuration parser.
 
 from __future__ import print_function
 
+import sys
 from unittest import TestCase
 from contextlib import contextmanager
 
@@ -41,7 +42,9 @@ class ConfigurationTests(TestCase):
             )
 
         with patch(
-                '__builtin__.open',
+                'builtins.open'
+                if sys.version_info >= (3, 0)
+                else '__builtin__.open',
                 mocked_open,
                 create=True,
         ):
