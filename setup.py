@@ -27,6 +27,11 @@ parallel, on different platforms.
         'pyyaml',
     ],
     test_suite='tests',
+    entry_points={
+        'console_scripts': [
+            'plix = plix.main:main',
+        ],
+    },
     classifiers=[
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
