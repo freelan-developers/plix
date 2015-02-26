@@ -25,6 +25,9 @@ parallel, on different platforms.
     install_requires=[
         'chromalog',
         'pyyaml',
+        'Jinja2',
+        'six',
+        'voluptuous',
     ],
     test_suite='tests',
     entry_points={

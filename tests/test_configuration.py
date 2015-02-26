@@ -5,8 +5,12 @@ Test the configuration parser.
 from __future__ import print_function
 
 import sys
+
 from unittest import TestCase
 from contextlib import contextmanager
+from voluptuous import (
+    MultipleInvalid,
+)
 
 try:
     from io import StringIO
@@ -15,7 +19,7 @@ except ImportError:
 
 from mock import patch
 
-from plix.configuration import Configuration
+import plix.configuration
 
 
 class ConfigurationTests(TestCase):
@@ -27,8 +31,8 @@ class ConfigurationTests(TestCase):
               - beta
             """,
         )
-        configuration = Configuration.load_from_stream(stream=stream)
-        self.assertEqual({'script': ['alpha', 'beta']}, configuration.conf)
+        loaded_conf = plix.configuration.load_from_stream(stream=stream)
+        self.assertEqual({'script': ['alpha', 'beta']}, loaded_conf)
 
     def test_load_from_file(self):
         @contextmanager
@@ -48,16 +52,41 @@ class ConfigurationTests(TestCase):
                 mocked_open,
                 create=True,
         ):
-            configuration = Configuration.load_from_file(filename='foo.yml')
+            loaded_conf = plix.configuration.load_from_file(filename='foo.yml')
 
-        self.assertEqual({'script': ['alpha', 'beta']}, configuration.conf)
+        self.assertEqual({'script': ['alpha', 'beta']}, loaded_conf)
 
-    def test_configuration_init(self):
+    def test_normalize_with_appropriate_configuration(self):
         conf = {
-            'script': [
-                'alpha',
-                'beta',
-            ],
+            'matrix': {
+                'alpha': 1,
+                'beta': 2,
+            },
+            'install': ('install.sh',),
+            'script': ['alpha'],
         }
-        configuration = Configuration(conf=conf)
-        self.assertEqual(conf, configuration.conf)
+        norm_conf = plix.configuration.normalize(conf)
+        self.assertEqual(conf, norm_conf)
+
+    def test_normalize_with_inappropriate_configuration(self):
+        conf = {
+            'matrix': [],
+            'script': {
+                'key': 'value',
+            },
+        }
+
+        with self.assertRaises(MultipleInvalid) as ex:
+            plix.configuration.normalize(conf)
+
+        self.assertEqual(2, len(ex.exception.errors))
+
+    def test_normalize_transforms_values(self):
+        conf = {
+            'script': 'alpha',
+        }
+        ref_conf = {
+            'script': ['alpha'],
+        }
+        norm_conf = plix.configuration.normalize(conf)
+        self.assertEqual(ref_conf, norm_conf)

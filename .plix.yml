@@ -2,6 +2,16 @@ virtualenv:
   path: .plix2.7
   requirements:
     - dev_requirements.txt
-  self_install: yes
+matrix:
+  alpha:
+    - foo
+    - bar
+  beta:
+    - one
+    - two
+    - three
+  gamma:
+    - aaa
+    - bbb
 script:
-  - pep8 --count plix tests
+  - echo {{alpha}} {{beta}}

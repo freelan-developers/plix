@@ -11,13 +11,36 @@ import yaml
 
 from chromalog import basicConfig
 
-from .configuration import Configuration
+from .configuration import load_from_file
+from .log import logger
 
 
-def main():
-    logger = logging.getLogger('plix')
-    basicConfig(format='%(message)s', level=logging.INFO)
+class PairsParser(argparse.Action):
+    """
+    Parses pairs of `key:value` arguments.
+    """
 
+    def __call__(self, parser, namespace, values, option_string=None):
+        pairs = []
+
+        for value in values:
+            if ':' not in value:
+                raise ValueError(
+                    "{} does not respect the `key:value` format".format(value),
+                )
+
+            pairs.append(tuple(value.split(':', 2)))
+
+        setattr(namespace, self.dest, frozenset(pairs))
+
+
+def parse_args(args):
+    """
+    Parse the arguments.
+
+    :param args: The arguments to parse.
+    :returns: A namespace instance.
+    """
     parser = argparse.ArgumentParser(
         description="Plix - a build matrix runner that cares about humans.",
     )
@@ -32,20 +55,32 @@ def main():
         '--configuration',
         '-c',
         default='.plix.yml',
-        type=Configuration.load_from_file,
+        type=load_from_file,
         help="The configuration file to use.",
+    )
+    parser.add_argument(
+        'pairs',
+        nargs='*',
+        default=[],
+        action=PairsParser,
+        help="A list of matrix context pairs that will limit the build.",
     )
 
     try:
-        args = parser.parse_args()
+        return parser.parse_args(args)
     except Exception as ex:
         logger.error("%s", ex)
-        sys.exit(1)
+        raise SystemExit(1)
+
+
+def main():
+    basicConfig(format='%(message)s', level=logging.INFO)
+    args = parse_args(sys.argv[1:])
 
     if args.debug:
         logger.setLevel(logging.DEBUG)
         logger.debug("Debug mode enabled.")
         logger.debug(
             "Parsed configuration is shown below:\n\n%s\n",
-            yaml.safe_dump(args.configuration.conf, indent=2),
+            yaml.safe_dump(args.configuration, indent=2),
         )
