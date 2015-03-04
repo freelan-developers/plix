@@ -2,14 +2,19 @@
 Configuration parser.
 """
 
+from __future__ import unicode_literals
+
 import yaml
 
 from six import string_types
 from voluptuous import (
     Schema,
+    Required,
     Coerce,
     Extra,
 )
+
+from .executors import ShellExecutor
 
 
 def load_from_stream(stream):
@@ -39,22 +44,6 @@ def command_or_command_list(value):
 
     :param value: The value to validate.
     :returns: A command list.
-
-    >>> command_or_command_list("foo")
-    ['foo']
-
-    >>> command_or_command_list(["foo", "bar"])
-    ['foo', 'bar']
-
-    >>> command_or_command_list(None)
-    Traceback (most recent call last):
-    ...
-    ValueError: Value must be either a string or a list
-
-    >>> command_or_command_list(42)
-    Traceback (most recent call last):
-    ...
-    ValueError: Value must be either a string or a list
     """
     if isinstance(value, string_types):
         return [value]
@@ -62,6 +51,28 @@ def command_or_command_list(value):
         return value
     else:
         raise ValueError("Value must be either a string or a list")
+
+
+def parse_executor(value):
+    """
+    Parse an executor string or dict and turns it into an executor instance.
+
+    :param value: The value to parse.
+    :returns: An executor instance.
+    """
+    if isinstance(value, string_types):
+        value = {'name': value}
+
+    executor_schema = Schema({
+        Required('name'): str,
+        Required('options', default={}): {Extra: object},
+    })
+    value = executor_schema(value)
+
+    module, klass = value['name'].rsplit('.', 1)
+    executor_klass = getattr(__import__(module, fromlist=[klass]), klass)
+
+    return executor_klass(options=value['options'])
 
 
 def normalize(configuration):
@@ -72,6 +83,10 @@ def normalize(configuration):
     :returns: The normalized configuration.
     """
     schema = Schema({
+        Required(
+            'executor',
+            default=ShellExecutor(),
+        ): Coerce(parse_executor),
         'global': {Extra: object},
         'matrix': {Extra: object},
         'exclusion_matrix': {Extra: object},

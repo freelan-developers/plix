@@ -2,6 +2,8 @@
 Matrix utilities.
 """
 
+from __future__ import unicode_literals
+
 from itertools import product
 
 from jinja2 import (

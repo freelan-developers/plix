@@ -2,7 +2,12 @@
 Plix - A build matrix builder and runner.
 """
 
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import logging
+
+from . import compat  # noqa
 
 
 # Add a new 'success' log level.

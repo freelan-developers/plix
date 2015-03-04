@@ -3,16 +3,20 @@ Command-line entry point.
 """
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import argparse
 import logging
 import sys
 import yaml
+import os
 
 from chromalog import basicConfig
 
 from .configuration import load_from_file
 from .log import logger
+from .displays import StreamDisplay
+from .compat import yaml_dump
 
 
 class PairsParser(argparse.Action):
@@ -73,14 +77,22 @@ def parse_args(args):
         raise SystemExit(1)
 
 
-def main():
+def main(args=sys.argv[1:]):
     basicConfig(format='%(message)s', level=logging.INFO)
-    args = parse_args(sys.argv[1:])
+    params = parse_args(args=args)
 
-    if args.debug:
+    if params.debug:
         logger.setLevel(logging.DEBUG)
         logger.debug("Debug mode enabled.")
         logger.debug(
             "Parsed configuration is shown below:\n\n%s\n",
-            yaml.safe_dump(args.configuration, indent=2),
+            yaml_dump(params.configuration, indent=2),
         )
+
+    display = StreamDisplay(stream=sys.stdout)
+
+    params.configuration['executor'].execute(
+        environment=os.environ,
+        commands=params.configuration['script'],
+        display=display,
+    )

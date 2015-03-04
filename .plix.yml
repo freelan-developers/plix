@@ -1,7 +1,3 @@
-virtualenv:
-  path: .plix2.7
-  requirements:
-    - dev_requirements.txt
 matrix:
   alpha:
     - foo
@@ -14,4 +10,7 @@ matrix:
     - aaa
     - bbb
 script:
-  - echo {{alpha}} {{beta}}
+  - "echo {{alpha}} {{beta}}"
+  - "echo éléphant"
+  - "false"
+  - "true"

@@ -28,6 +28,7 @@ parallel, on different platforms.
         'Jinja2',
         'six',
         'voluptuous',
+        'pyzmq',
     ],
     test_suite='tests',
     entry_points={
