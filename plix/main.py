@@ -8,7 +8,6 @@ from __future__ import unicode_literals
 import argparse
 import logging
 import sys
-import yaml
 import os
 
 from chromalog import basicConfig
