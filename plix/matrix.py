@@ -42,9 +42,9 @@ def generate_variants(matrix, subset_pairs=set()):
     subset_pairs = frozenset(subset_pairs)
 
     for values in product(
-            *[value for key, value in matrix.items() if key in keys]
+            *[value for key, value in sorted(matrix.items()) if key in keys]
     ):
-        variant = frozenset(zip(keys, values))
+        variant = frozenset(zip(sorted(keys), values))
 
         if subset_pairs.issubset(variant):
             yield variant
