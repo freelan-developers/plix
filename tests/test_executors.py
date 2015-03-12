@@ -67,6 +67,38 @@ class ExecutorsTests(TestCase):
                 display=display,
             )
 
+    def test_base_executors_returns_true_on_success(self):
+        class MyExecutor(BaseExecutor):
+            def execute_one(self, environment, command, output):
+                return 0
+
+        display = MockDisplay()
+        executor = MyExecutor()
+
+        status = executor.execute(
+            environment={},
+            commands=['a'],
+            display=display,
+        )
+
+        self.assertTrue(status)
+
+    def test_base_executors_returns_false_on_failure(self):
+        class MyExecutor(BaseExecutor):
+            def execute_one(self, environment, command, output):
+                return 1
+
+        display = MockDisplay()
+        executor = MyExecutor()
+
+        status = executor.execute(
+            environment={},
+            commands=['a'],
+            display=display,
+        )
+
+        self.assertFalse(status)
+
     def test_shell_executor_execute(self):
         environment = {"FOO": "BAR"}
         commands = ["alpha", "beta"]
@@ -93,15 +125,15 @@ class ExecutorsTests(TestCase):
         self.assertEqual(
             display.start_command.mock_calls,
             [
-                call(index=0, total=2, command="alpha"),
-                call(index=1, total=2, command="beta"),
+                call(index=0, command="alpha"),
+                call(index=1, command="beta"),
             ],
         )
         self.assertEqual(
             display.stop_command.mock_calls,
             [
-                call(index=0, total=2, command="alpha", returncode=0),
-                call(index=1, total=2, command="beta", returncode=0),
+                call(index=0, command="alpha", returncode=0),
+                call(index=1, command="beta", returncode=0),
             ],
         )
         self.assertEqual(

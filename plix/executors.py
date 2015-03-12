@@ -43,11 +43,13 @@ class BaseExecutor(object):
         :param environment: The environment variables dictionary.
         :param commands: A list of commands to execute.
         :param display: The display to use for command output and report.
+        :returns: True if the execution went fine, False otherwise.
         """
+        display.set_context(commands=commands)
+
         for index, command in enumerate(commands):
             with display.command(
                     index,
-                    len(commands),
                     command,
             ) as result:
                 result.returncode = self.execute_one(
@@ -63,6 +65,10 @@ class BaseExecutor(object):
                             command,
                         ),
                     )
+                elif result.returncode != 0:
+                    return False
+
+        return True
 
 
 def executor_representer(dumper, executor):

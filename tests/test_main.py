@@ -12,7 +12,10 @@ from plix.main import (
     main,
 )
 
-from .common import PythonExecutor
+from .common import (
+    PythonExecutor,
+    MockDisplay,
+)
 
 
 class MainTests(TestCase):
@@ -67,6 +70,6 @@ class MainTests(TestCase):
             debug=True,
         )
 
-        main(args=['-d'])
+        main(args=['-d'], display=MockDisplay())
 
         self.assertEqual([42, 123], x)

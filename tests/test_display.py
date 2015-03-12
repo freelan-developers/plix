@@ -5,7 +5,11 @@ Test the displays.
 from __future__ import unicode_literals
 
 from unittest import TestCase
-from mock import MagicMock
+from mock import (
+    MagicMock,
+    call,
+)
+from chromalog.colorizer import GenericColorizer
 
 from plix.displays import (
     BaseDisplay,
@@ -19,65 +23,121 @@ class DisplaysTests(TestCase):
             start_command = MagicMock()
             stop_command = MagicMock()
 
-        my_display = MyDisplay()
+        display = MyDisplay()
 
-        with my_display.command(42, 1984, "my command") as result:
+        with display.command(42, "my command") as result:
             result.returncode = 1234
 
-        my_display.start_command.assert_called_once_with(
+        display.start_command.assert_called_once_with(
             index=42,
-            total=1984,
             command="my command",
         )
-        my_display.stop_command.assert_called_once_with(
+        display.stop_command.assert_called_once_with(
             index=42,
-            total=1984,
             command="my command",
             returncode=1234,
         )
 
-    def test_stream_display_handles_binary_streams_py2(self):
+    def test_stream_display_py2_no_color(self, *args):
         stream = MagicMock()
+        del stream.isatty
         del stream.buffer
         display = StreamDisplay(stream=stream)
+        display.set_context(commands=["my command"])
 
         self.assertEqual(display.stream, stream)
         self.assertEqual(display.binary_stream, stream)
 
-    def test_stream_display_handles_binary_streams_py3(self):
+        with display.command(42, "my command") as result:
+            data = "DATA".encode('utf-8')
+            display.command_output(42, data)
+            result.returncode = 17
+
+        self.assertEqual(
+            [
+                call("43) my command"),
+                call("\t[failed]\n"),
+                call(data),
+                call("43) Command exited with 17\n"),
+            ],
+            stream.write.mock_calls,
+        )
+
+    def test_stream_display_py3_no_color(self, *args):
         stream = MagicMock()
+        del stream.isatty
         display = StreamDisplay(stream=stream)
+        display.set_context(commands=["my command"])
 
         self.assertEqual(display.stream, stream)
         self.assertEqual(display.binary_stream, stream.buffer)
 
-    def test_stream_display_start_command(self):
-        stream = MagicMock()
-        display = StreamDisplay(stream=stream)
-        display.start_command(42, 1984, "my command")
+        with display.command(42, "my command") as result:
+            data = "DATA".encode('utf-8')
+            display.command_output(42, data)
+            result.returncode = 17
 
-        stream.write.assert_called_once_with("> my command\n")
+        self.assertEqual(
+            [
+                call("43) my command"),
+                call("\t[failed]\n"),
+                call("43) Command exited with 17\n"),
+            ],
+            stream.write.mock_calls,
+        )
+        stream.buffer.write.assert_called_once_with(data)
 
-    def test_stream_display_stop_command(self):
-        stream = MagicMock()
-        display = StreamDisplay(stream=stream)
-        display.stop_command(42, 1984, "my command", 1234)
-
-        stream.write.assert_called_once_with("> Exit status: 1234\n")
-
-    def test_stream_display_command_output_py2(self):
+    def test_stream_display_py2_with_color(self, *args):
         stream = MagicMock()
         del stream.buffer
-        display = StreamDisplay(stream=stream)
-        data = "DATA".encode('utf-8')
-        display.command_output(42, data)
+        colorizer = GenericColorizer(color_map={
+            'error': ('<', '>'),
+            'warning': ('(', ')'),
+        })
+        display = StreamDisplay(stream=stream, colorizer=colorizer)
+        display.set_context(commands=["my command"])
 
-        stream.write.assert_called_once_with(data)
+        self.assertEqual(display.stream, stream)
+        self.assertEqual(display.binary_stream, stream)
 
-    def test_stream_display_command_output_py3(self):
+        with display.command(42, "my command") as result:
+            data = "DATA".encode('utf-8')
+            display.command_output(42, data)
+            result.returncode = 17
+
+        self.assertEqual(
+            [
+                call("(43)) my command"),
+                call("\t[<failed>]\n"),
+                call(data),
+                call("(43)) <Command exited with> <17>\n"),
+            ],
+            stream.write.mock_calls,
+        )
+
+    def test_stream_display_py3_with_color(self, *args):
         stream = MagicMock()
-        display = StreamDisplay(stream=stream)
-        data = "DATA".encode('utf-8')
-        display.command_output(42, data)
+        colorizer = GenericColorizer(color_map={
+            'error': ('<', '>'),
+            'warning': ('(', ')'),
+        })
+        display = StreamDisplay(stream=stream, colorizer=colorizer)
+        display.set_context(commands=["my command"])
 
+        self.assertEqual(display.stream, stream)
+        self.assertEqual(display.binary_stream, stream.buffer)
+
+        with display.command(42, "my command") as result:
+            data = "DATA".encode('utf-8')
+            display.command_output(42, data)
+            result.returncode = 17
+
+        self.assertEqual(
+            [
+                call("(43)) my command"),
+                call("\t[<failed>]\n"),
+                call("(43)) <Command exited with> <17>\n"),
+            ],
+            stream.write.mock_calls,
+        )
         stream.buffer.write.assert_called_once_with(data)

@@ -6,6 +6,16 @@ from __future__ import unicode_literals
 
 from contextlib import contextmanager
 from argparse import Namespace
+from io import BytesIO
+
+from chromalog.stream import stream_has_color_support
+from chromalog.colorizer import Colorizer
+from chromalog.mark.helpers.simple import (
+    warning,
+    important,
+    success,
+    error,
+)
 
 
 class BaseDisplay(object):
@@ -14,20 +24,18 @@ class BaseDisplay(object):
     """
 
     @contextmanager
-    def command(self, index, total, command):
+    def command(self, index, command):
         """
         Contextmanager that wraps calls to :func:`start_command` and
         :func:`stop_command`.
 
         :param index: The index of the command.
-        :param total: The total number of commands.
         :param command: The command that is about to be executed, as an unicode
             string.
         """
 
         self.start_command(
             index=index,
-            total=total,
             command=command,
         )
 
@@ -38,7 +46,6 @@ class BaseDisplay(object):
         finally:
             self.stop_command(
                 index=index,
-                total=total,
                 command=command,
                 returncode=result.returncode,
             )
@@ -49,7 +56,7 @@ class StreamDisplay(BaseDisplay):
     Displays commands output to an output stream.
     """
 
-    def __init__(self, stream):
+    def __init__(self, stream, colorizer=Colorizer()):
         """
         Initialize the :class:`StreamDisplay`.
 
@@ -57,6 +64,8 @@ class StreamDisplay(BaseDisplay):
         """
         super(StreamDisplay, self).__init__()
         self.stream = stream
+        self.colorizer = colorizer
+        self.output_map = {}
 
         # Python 3 differentiates binary streams.
         if hasattr(stream, 'buffer'):
@@ -64,27 +73,66 @@ class StreamDisplay(BaseDisplay):
         else:
             self.binary_stream = stream
 
-    def start_command(self, index, total, command):
+    def format_output(self, message, *args, **kwargs):
+        """
+        Format some output in regards to the output stream color-capability.
+
+        :param message: A message.
+        :returns: The formatted message.
+        """
+        if stream_has_color_support(self.stream):
+            return self.colorizer.colorize_message(message, *args, **kwargs)
+        else:
+            return message.format(*args, **kwargs)
+
+    def set_context(self, commands):
+        """
+        Set the context for display.
+
+        :param commands: The list of commands to be executed.
+        """
+        self.longest_len = max(map(len, commands))
+
+    def start_command(self, index, command):
         """
         Indicate that a command stopped.
 
         :param index: The index of the command.
-        :param total: The total number of commands.
         :param command: The command that is about to be executed, as an unicode
             string.
         """
-        self.stream.write("> {}\n".format(command))
+        self.stream.write(self.format_output(
+            "{}) {}",
+            warning(important(index + 1)),
+            command,
+        ))
+        self.stream.flush()
+        self.output_map[index] = BytesIO()
 
-    def stop_command(self, index, total, command, returncode):
+    def stop_command(self, index, command, returncode):
         """
         Indicate that a command stopped.
 
         :param index: The index of the command.
-        :param total: The total number of commands.
         :param command: The command that was executed, as an unicode string.
         :param returncode: The exit status.
         """
-        self.stream.write("> Exit status: {}\n".format(returncode))
+        self.stream.write(self.format_output(
+            "{}\t[{}]\n",
+            " " * (self.longest_len - len(command)),
+            success("success") if returncode == 0 else error("failed"),
+        ))
+
+        if returncode != 0:
+            self.binary_stream.write(self.output_map[index].getvalue())
+            self.stream.write(self.format_output(
+                "{}) {} {}\n",
+                warning(important(index + 1)),
+                error("Command exited with"),
+                important(error(returncode)),
+            ))
+
+        del self.output_map[index]
 
     def command_output(self, index, data):
         """
@@ -93,4 +141,4 @@ class StreamDisplay(BaseDisplay):
         :param index: The index of the command.
         :param data: The output data (as bytes).
         """
-        self.binary_stream.write(data)
+        self.output_map[index].write(data)

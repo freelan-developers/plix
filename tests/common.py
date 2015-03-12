@@ -41,6 +41,7 @@ class PythonExecutor(BaseExecutor):
 class MockDisplay(BaseDisplay):
     def __new__(cls):
         self = super(MockDisplay, cls).__new__(cls)
+        self.set_context = MagicMock()
         self.start_command = MagicMock()
         self.stop_command = MagicMock()
         self.command_output = MagicMock()

@@ -76,7 +76,7 @@ def parse_args(args):
         raise SystemExit(1)
 
 
-def main(args=sys.argv[1:]):
+def main(args=sys.argv[1:], display=StreamDisplay(stream=sys.stdout)):
     basicConfig(format='%(message)s', level=logging.INFO)
     params = parse_args(args=args)
 
@@ -87,8 +87,6 @@ def main(args=sys.argv[1:]):
             "Parsed configuration is shown below:\n\n%s\n",
             yaml_dump(params.configuration, indent=2),
         )
-
-    display = StreamDisplay(stream=sys.stdout)
 
     params.configuration['executor'].execute(
         environment=os.environ,
