@@ -13,6 +13,7 @@ from voluptuous import (
     Coerce,
     Extra,
 )
+from io import open
 
 from .executors import ShellExecutor
 
