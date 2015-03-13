@@ -8,6 +8,8 @@ from contextlib import contextmanager
 from argparse import Namespace
 from io import BytesIO
 
+from colorama import AnsiToWin32
+
 from chromalog.stream import stream_has_color_support
 from chromalog.colorizer import Colorizer
 from chromalog.mark.helpers.simple import (
@@ -63,9 +65,13 @@ class StreamDisplay(BaseDisplay):
         :param stream: The stream to be attached too.
         """
         super(StreamDisplay, self).__init__()
-        self.stream = stream
         self.colorizer = colorizer
         self.output_map = {}
+
+        if stream_has_color_support(stream):
+            self.stream = AnsiToWin32(stream).stream
+        else:
+            self.stream = stream
 
         # Python 3 differentiates binary streams.
         if hasattr(stream, 'buffer'):
