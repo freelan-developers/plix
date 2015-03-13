@@ -27,14 +27,14 @@ def load_from_stream(stream):
     return normalize(yaml.safe_load(stream))
 
 
-def load_from_file(filename):
+def load_from_file(filename, encoding='utf-8'):
     """
     Load a configuration from a file.
 
     :param filename: The name of the file to load the configuration from.
     :returns: The normalized configuration.
     """
-    with open(filename) as stream:
+    with open(filename, encoding=encoding) as stream:
         return load_from_stream(stream=stream)
 
 
