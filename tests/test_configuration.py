@@ -34,17 +34,10 @@ class ConfigurationTests(TestCase):
               - beta
             """,
         )
-        with patch(
-            'plix.configuration.ShellExecutor',
-            return_value=None,
-        ):
-            loaded_conf = plix.configuration.load_from_stream(stream=stream)
+        loaded_conf = plix.configuration.load_from_stream(stream=stream)
         self.assertEqual(
-            {
-                'executor': None,
-                'script': ['alpha', 'beta'],
-            },
-            loaded_conf,
+            ['alpha', 'beta'],
+            loaded_conf['script'],
         )
 
     def test_load_from_file(self):
@@ -59,23 +52,17 @@ class ConfigurationTests(TestCase):
             )
 
         with patch(
-                'builtins.open'
-                if sys.version_info >= (3, 0)
-                else '__builtin__.open',
-                mocked_open,
-                create=True,
-        ), patch(
-            'plix.configuration.ShellExecutor',
-            return_value=None,
+            'builtins.open'
+            if sys.version_info >= (3, 0)
+            else '__builtin__.open',
+            mocked_open,
+            create=True,
         ):
             loaded_conf = plix.configuration.load_from_file(filename='foo.yml')
 
         self.assertEqual(
-            {
-                'executor': None,
-                'script': ['alpha', 'beta'],
-            },
-            loaded_conf,
+            ['alpha', 'beta'],
+            loaded_conf['script'],
         )
 
     def test_command_or_command_list_with_strings(self):
@@ -120,16 +107,11 @@ class ConfigurationTests(TestCase):
             'install': ('install.sh',),
             'script': ['alpha'],
         }
-
-        with patch(
-            'plix.configuration.ShellExecutor',
-            return_value=None,
-        ):
-            norm_conf = plix.configuration.normalize(conf)
-
         ref_conf = conf.copy()
-        ref_conf.update(executor=None)
-        self.assertEqual(ref_conf, norm_conf)
+        norm_conf = plix.configuration.normalize(conf)
+
+        for key in ref_conf:
+            self.assertEqual(ref_conf[key], norm_conf[key])
 
     def test_normalize_with_inappropriate_configuration(self):
         conf = {
@@ -149,17 +131,12 @@ class ConfigurationTests(TestCase):
             'script': 'alpha',
         }
         ref_conf = {
-            'executor': None,
             'script': ['alpha'],
         }
 
-        with patch(
-            'plix.configuration.ShellExecutor',
-            return_value=None,
-        ):
-            norm_conf = plix.configuration.normalize(conf)
+        norm_conf = plix.configuration.normalize(conf)
 
-        self.assertEqual(ref_conf, norm_conf)
+        self.assertEqual(ref_conf['script'], norm_conf['script'])
 
     def test_normalize_parses_executors(self):
         my_module = MagicMock()
@@ -175,13 +152,10 @@ class ConfigurationTests(TestCase):
         with patch.dict(
             'sys.modules',
             {'my_module': my_module},
-        ), patch(
-            'plix.configuration.ShellExecutor',
-            return_value=None,
         ):
             norm_conf = plix.configuration.normalize(conf)
 
-        self.assertEqual(ref_conf, norm_conf)
+        self.assertEqual(ref_conf['executor'], norm_conf['executor'])
 
     def test_normalize_parses_executors_with_options(self):
         my_module = MagicMock()
@@ -204,13 +178,10 @@ class ConfigurationTests(TestCase):
         with patch.dict(
             'sys.modules',
             {'my_module': my_module},
-        ), patch(
-            'plix.configuration.ShellExecutor',
-            return_value=None,
         ):
             norm_conf = plix.configuration.normalize(conf)
 
-        self.assertEqual(ref_conf, norm_conf)
+        self.assertEqual(ref_conf['executor'], norm_conf['executor'])
         my_module.MyExecutor.assert_called_once_with(
             options={
                 'a': 'alpha',
