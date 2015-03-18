@@ -51,13 +51,7 @@ class ConfigurationTests(TestCase):
                 """,
             )
 
-        with patch(
-            'builtins.open'
-            if sys.version_info >= (3, 0)
-            else '__builtin__.open',
-            mocked_open,
-            create=True,
-        ):
+        with patch('plix.configuration.open', mocked_open, create=True):
             loaded_conf = plix.configuration.load_from_file(filename='foo.yml')
 
         self.assertEqual(
