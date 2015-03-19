@@ -8,14 +8,24 @@ from __future__ import unicode_literals
 import argparse
 import logging
 import sys
-import os
+import pkg_resources
 
 from chromalog import basicConfig
+from chromalog.mark.helpers.simple import (
+    important,
+    debug,
+)
 
 from .configuration import load_from_file
 from .log import logger
-from .displays import StreamDisplay
 from .compat import yaml_dump
+from .commands import (
+    command_run,
+)
+from .exceptions import (
+    DuplicateKeys,
+    UnknownKeys,
+)
 
 
 class PairsParser(argparse.Action):
@@ -61,12 +71,24 @@ def parse_args(args):
         type=load_from_file,
         help="The configuration file to use.",
     )
-    parser.add_argument(
+
+    command_parser = parser.add_subparsers(help='The available commands.')
+
+    # The run command
+    run_command_parser = command_parser.add_parser(
+        'run',
+        help='Run the matrix.',
+    )
+    run_command_parser.set_defaults(
+        command=command_run,
+        command_args={'configuration', 'pairs'},
+    )
+    run_command_parser.add_argument(
         'pairs',
         nargs='*',
         default=[],
         action=PairsParser,
-        help="A list of matrix context pairs that will limit the build.",
+        help="A list of matrix context pairs that to limit the run to.",
     )
 
     try:
@@ -76,9 +98,25 @@ def parse_args(args):
         raise SystemExit(1)
 
 
-def main(args=sys.argv[1:], display=StreamDisplay(stream=sys.stdout)):
+def extract_command_and_args(params):
+    command = params.command
+    command_args = params.command_args
+
+    return command, {
+        arg: getattr(params, arg)
+        for arg in command_args
+    }
+
+
+def main(args=sys.argv[1:]):
     basicConfig(format='%(message)s', level=logging.INFO)
     params = parse_args(args=args)
+
+    logger.info(
+        "This is %s version %s. Prepare to be amazed !\n",
+        debug(important("plix")),
+        debug(important(pkg_resources.get_distribution("plix").version)),
+    )
 
     if params.debug:
         logger.setLevel(logging.DEBUG)
@@ -88,8 +126,23 @@ def main(args=sys.argv[1:], display=StreamDisplay(stream=sys.stdout)):
             yaml_dump(params.configuration, indent=2),
         )
 
-    params.configuration['executor'].execute(
-        environment=os.environ,
-        commands=params.configuration['script'],
-        display=display,
-    )
+    command, args = extract_command_and_args(params)
+
+    try:
+        command(logger=logger, **args)
+    except DuplicateKeys as ex:
+        logger.error(
+            "Duplicated keys are not allowed in the configuration (keys: %s).",
+            important(", ".join(ex.keys)),
+        )
+    except UnknownKeys as ex:
+        logger.error(
+            "Unable to parse the configuration. Some keys are unknown: %s",
+            important(", ".join(ex.keys)),
+        )
+    except Exception as ex:
+        if not params.debug:
+            logger.error("%s", ex)
+            raise SystemExit(1)
+        else:
+            raise

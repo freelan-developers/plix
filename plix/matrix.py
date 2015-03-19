@@ -4,50 +4,90 @@ Matrix utilities.
 
 from __future__ import unicode_literals
 
+from six import string_types
+
 from itertools import product
 
 from jinja2 import (
     Environment,
     meta,
+    Template,
 )
 
-from .exceptions import UnknownKeys
 
-
-def find_required_keys(*commands):
+def find_required_keys(objects):
     """
-    Parse a command and get a set of all referenced context keys it contains.
+    Parse objects nd and get a set of all referenced context keys they contain.
 
-    :param commands: The command(s) to parse.
+    :param objects: The objects to parse.
     :returns: A set of all contained context keys.
     """
     result = set()
 
-    for command in commands:
-        result |= meta.find_undeclared_variables(Environment().parse(command))
+    for obj in objects:
+        if isinstance(obj, string_types):
+            result |= meta.find_undeclared_variables(Environment().parse(obj))
+        elif isinstance(obj, (list, tuple)):
+            result |= find_required_keys(obj)
+        elif isinstance(obj, dict):
+            result |= find_required_keys(obj.items())
 
     return result
 
 
-def generate_variants(matrix, subset_pairs=set()):
+def render_object(obj, context):
     """
-    Generate all variants for the specified ``matrix``, eventually limiting to
-    those that contain ``subset_pairs``.
+    Render an object with the specified `context`.
+
+    :param obj: The object to render.
+    :param context: The context to use.
+    :returns: The rendered object.
+    """
+    if isinstance(obj, string_types):
+        return Template(obj).render(**context)
+    elif isinstance(obj, (list, tuple)):
+        return type(obj)(render_object(x, context) for x in obj)
+    elif isinstance(obj, dict):
+        return {
+            key: render_object(value, context)
+            for key, value in obj.items()
+        }
+    else:
+        return obj
+
+
+def generate_variants(matrix):
+    """
+    Generate all variants for the specified ``matrix``.
 
     :param matrix: The matrix to generate the variants from.
-    :param subset_pairs: A set of pairs that limits the generated matrices.
-    :yields: Sets of pairs for each of the matrix variants.
+    :returns: Sets of pairs for each of the matrix variants.
     """
     keys = frozenset(matrix.keys())
-    subset_pairs = frozenset(subset_pairs)
+    variants = []
 
     for values in product(
             *[value for key, value in sorted(matrix.items()) if key in keys]
     ):
-        variant = frozenset(zip(sorted(keys), values))
+        variants.append(frozenset(zip(sorted(keys), values)))
 
-        if subset_pairs.issubset(variant):
-            yield variant
+    return variants
+
+
+def filter_variants(variants, subset_pairs):
+    """
+    Filter variants that don't contain the specified subset_pairs.
+
+    :param subset_pairs: A set of pairs that limits the generated matrices.
+    :returns: The variants that contain the specified `subset_pairs`.
+    """
+    subset_pairs = frozenset(subset_pairs)
+
+    return [
+        variant
+        for variant in variants
+        if subset_pairs.issubset(variant)
+    ]
 
 
 def validate_keys(matrix, keys):
@@ -62,11 +102,8 @@ def validate_keys(matrix, keys):
     mkeys = frozenset(matrix.keys())
     unknown_keys = keys.difference(mkeys)
 
-    if unknown_keys:
-        raise UnknownKeys(keys=unknown_keys)
-
     return {
         key: value
         for key, value in matrix.items()
         if key in keys
-    }
+    }, unknown_keys

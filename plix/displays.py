@@ -132,9 +132,8 @@ class StreamDisplay(BaseDisplay):
         if returncode != 0:
             self.binary_stream.write(self.output_map[index].getvalue())
             self.stream.write(self.format_output(
-                "{}) {} {}\n",
-                warning(important(index + 1)),
-                error("Command exited with"),
+                "> {} {}\n",
+                error("Command failed with code"),
                 important(error(returncode)),
             ))
 

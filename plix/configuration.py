@@ -91,16 +91,10 @@ def normalize(configuration):
         Required('global', default={}): {Extra: object},
         Required('matrix', default={}): {Extra: object},
         Required('exclusion_matrix', default=[]): {Extra: object},
-        Required(
-            'before_install',
-            default=[],
-        ): Coerce(command_or_command_list),
         Required('install', default=[]): Coerce(command_or_command_list),
-        Required('before_script', default=[]): Coerce(command_or_command_list),
         Required('script', default=[]): Coerce(command_or_command_list),
         Required('after_success', default=[]): Coerce(command_or_command_list),
         Required('after_failure', default=[]): Coerce(command_or_command_list),
-        Required('after_script', default=[]): Coerce(command_or_command_list),
     })
 
     return schema(configuration)
