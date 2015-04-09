@@ -22,15 +22,11 @@ class PythonExecutor(BaseExecutor):
         self.locals = locals
 
     def execute_one(self, environment, command, output):
-
         stdout = StringIO()
         stderr = StringIO()
 
         with patch('sys.stderr', stderr), patch('sys.stdout', stdout):
-            try:
-                exec(command, self.globals, self.locals)
-            except Exception as ex:
-                stderr.write(str(ex))
+            exec(command, self.globals, self.locals)
 
         output(stdout.getvalue())
         output(stderr.getvalue())

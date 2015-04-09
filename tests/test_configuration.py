@@ -4,18 +4,12 @@ Test the configuration parser.
 
 from __future__ import print_function
 
-import sys
-
 from unittest import TestCase
 from contextlib import contextmanager
 from voluptuous import (
     MultipleInvalid,
 )
-
-try:
-    from io import StringIO
-except ImportError:
-    from StringIO import StringIO
+from six import StringIO
 
 from mock import (
     patch,
